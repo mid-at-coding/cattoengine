@@ -1,5 +1,5 @@
 #include <iostream>
-#include "raylib.h"
+#include "include/raylib.h"
 #include "engine.hpp"
 #include "entity.hpp"
 Color CycleRainbow(Color currentc){
@@ -12,24 +12,23 @@ Color CycleRainbow(Color currentc){
 	return current;
 }
 int main(){
-	std::cout<<"test ";
 	BackgroundScreen test;
-	Entity testEntity;
-	test.Init("test", 144);
-	std::cout<<"1"<<std::endl;
-	testEntity.hitboxes.push_back(EntityHitbox(50,50,1,50));
-	std::cout<<"2"<<std::endl;
-	testEntity.hitboxTexts.push_back(LoadTexture("galaxy.png"));
-	std::cout<<"3"<<std::endl;
-	testEntity.hitboxes[0].speedX = testEntity.hitboxes[0].speedY = 2;
-	std::cout<<"4"<<std::endl;
+	Entity testEntity , testEntity2;
 	double counter;
 	Color current = RED;
+	test.Init("test", 144);
+	testEntity.hitboxes.push_back(EntityHitbox(0,0,400,400));
+	testEntity2.hitboxes.push_back(EntityHitbox(50,50,400,400));
+	testEntity.hitboxTexts.push_back(LoadTexture("galaxy.png"));
+	testEntity2.hitboxTexts.push_back(LoadTexture("galaxy.png"));
+	testEntity.hitboxes[0].speedX = testEntity.hitboxes[0].speedY = 40;
+	testEntity2.hitboxes[0].speedX = testEntity2.hitboxes[0].speedY = 0;
 	counter = 0;
-	while(!WindowShouldClose()){
-		DT = GetFrameTime();
-		test.Draw(WHITE);
+	while (!WindowShouldClose()) {
+		DT = GetFrameTime(); // keep this here
+		test.Draw(testEntity.Colliding(testEntity2.hitboxes[0]) ? RED : WHITE);
 		testEntity.Draw(current);
+		testEntity2.Draw(CycleRainbow(CycleRainbow(current)));
 		testEntity.hitboxes[0].Move();
 		counter += DT;
 		if(counter >= 0.5){

@@ -6,19 +6,24 @@
 // Functions / classes = PascalCase
 // Variables = camelCase
 double DT = 0;
-#define CELLSX 100
-#define CELLSY 100
 #define SCREENX 800
 #define SCREENY 800
-#define CELLSIZEX (SCREENX/CELLSX)
-#define CELLSIZEY (SCREENY/CELLSY)
 #define ENTITY_MAX 20
-#define DEBUG true
-class Point{
-public :
+#define DEBUG false
+struct Point{
 	int x = 0;
 	int y = 0;
 };
+struct DoublePoint{
+	double x = 0;
+	double y = 0;
+};
+Point DoublePointToPoint(DoublePoint d){
+	return(Point({ int(d.x) , int(d.y) }));
+}
+DoublePoint PointToDoublePoint(Point p){
+	return(DoublePoint({ double(p.x) , double(p.y) }));
+}
 bool ColorsEqual(Color c1, Color c2){
 	if(c1.r == c2.r && c1.g == c2.g && c1.b == c2.b) {
 //	std::cout<<"colours are equal"<<std::endl;
@@ -27,18 +32,18 @@ bool ColorsEqual(Color c1, Color c2){
 	return false;
 }
 class BackgroundScreen{
-	bool barrier[CELLSX][CELLSY];
+	bool barrier[SCREENX][SCREENY];
 	Texture2D background;
 	bool backgroundIsText;
 public :
-	void Init(std::string windowName, int fps = 0, std::string backgroundImage = "none"){
+	void Init(std::string windowName, int fps = 0, std::string backgroundImage = "\n"){ // just using \n as a placeholder because it wont be in any file names
 		std::cout<<std::endl<<"Starting Initialization"<<std::endl;
 		InitWindow(SCREENX, SCREENY, windowName.c_str());
 		if(fps){
 			SetTargetFPS(fps);
 		}
 		backgroundIsText = false;// Texture, not literal text
-		if (backgroundImage != "none"){
+		if (backgroundImage != "\n"){
 			background = LoadTexture(backgroundImage.c_str());
 			backgroundIsText = true;
 		}
