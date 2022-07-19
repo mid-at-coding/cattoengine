@@ -1,15 +1,15 @@
 #ifndef engine_h
 #define engine_h
 #include <string>
-// Defines main functions, object classes & variables
 // Macros / global variables = SNAKE_CASE_CAPS
 // Functions / classes = PascalCase
 // Variables = camelCase
 double DT = 0;
 #define SCREENX 800
 #define SCREENY 800
-#define ENTITY_MAX 20
-#define DEBUG false
+#define ENTITY_MAX 2000
+#define DEBUG true
+#define EMAX_CRASH false
 struct Point{
 	int x = 0;
 	int y = 0;
@@ -32,32 +32,38 @@ bool ColorsEqual(Color c1, Color c2){
 	return false;
 }
 class BackgroundScreen{
+public:	
+	bool backgroundIsText;
 	bool barrier[SCREENX][SCREENY];
 	Texture2D background;
-	bool backgroundIsText;
-public :
-	void Init(std::string windowName, int fps = 0, std::string backgroundImage = "\n"){ // just using \n as a placeholder because it wont be in any file names
-		std::cout<<std::endl<<"Starting Initialization"<<std::endl;
-		InitWindow(SCREENX, SCREENY, windowName.c_str());
-		if(fps){
-			SetTargetFPS(fps);
-		}
-		backgroundIsText = false;// Texture, not literal text
-		if (backgroundImage != "\n"){
-			background = LoadTexture(backgroundImage.c_str());
-			backgroundIsText = true;
-		}
-		std::cout<<std::endl<<"Initialization Finished"<<std::endl;
-	}
-	void Draw(Color backgroundTint = WHITE){
-		BeginDrawing();
+	Color backgroundTint = WHITE;
+	void Draw(){
 			if(backgroundIsText){
 				DrawTexture(background, 0, 0, backgroundTint);  
 			}
 			else{
 				ClearBackground(backgroundTint);
 			}
-		EndDrawing();
+	}
+	BackgroundScreen(std::string backgroundImage = "\n") {
+		backgroundIsText = false;// Texture, not literal text
+		if (backgroundImage != "\n") {
+			background = LoadTexture(backgroundImage.c_str());
+			backgroundIsText = true;
+		}
+	}
+	void init(std::string windowName, int fps = 0, std::string backgroundImage = "\n") { // just using \n as a placeholder because it wont be in any file names
+		std::cout << std::endl << "Starting Initialization" << std::endl;
+		InitWindow(SCREENX, SCREENY, windowName.c_str());
+		if (fps) {
+			SetTargetFPS(fps);
+		}
+		backgroundIsText = false;// Texture, not literal text
+		if (backgroundImage != "\n") {
+			background = LoadTexture(backgroundImage.c_str());
+			backgroundIsText = true;
+		}
+		std::cout << std::endl << "Initialization Finished" << std::endl;
 	}
 };
 
