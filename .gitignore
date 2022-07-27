@@ -1,6 +1,2 @@
 /CMakeFiles
-tile_editor.cpp
-cmake_install.cmake
-Makefile
-CMakeCache.txt
-engine
+/build
