@@ -1,8 +1,8 @@
 #include <iostream>
-#include "include/raylib.h"
-#include "include/engine.hpp"
-#include "include/entity.hpp"
-#include "include/screen.hpp"
+#include "raylib.h"
+#include "engine.hpp"
+#include "entity.hpp"
+#include "screen.hpp"
 #define SPEED 500
 void CheckMovement(Entity & Player) {
 	bool moveUp = IsKeyDown(KEY_W) || IsKeyDown(KEY_UP);
@@ -116,7 +116,7 @@ int main(){
 	Screen test; // creates screen
 	initEntityArr(); // empties array; clears garbage
 	Entity Player; // creates two entities; Player, and Copy. Constructer is run, all data is (ideally) in the array
-	test.init("i am so good at programming"); // initializes screen with refresh rate of current monitor
+	test.Init("i am so good at programming"); // initializes screen with refresh rate of current monitor
 	Texture2D smallBall = LoadTexture("assets/small_ball.png"); // Loads texture
 	Texture2D ball = LoadTexture("assets/ball.png"); // ^^
 	double time, homingCounter, sweepCounter;
@@ -142,7 +142,7 @@ int main(){
 			homingCounter += DT;
 			sweepCounter += DT;
 			if (Player.OutOfBounds()|| CheckLoseState(Player)) {
-				test.load(); // resets screen
+				test.Load(); // resets screen
 				StopSound(backgroundMusic);
 				PlaySound(backgroundMusic);
 				time = 0;
