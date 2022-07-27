@@ -205,7 +205,7 @@ public :
 };
 
 void DrawEntities() { // dont question it im begging you
-	for (int k = 0; k < LOADED_ENTITIES_HEAD; k++) {
+	for (int k = 1; k < LOADED_ENTITIES_HEAD; k++) {
 		if (!LOADED_ENTITIES[k].isTrigger) {
 			for (int i = 0; i < LOADED_ENTITIES[k].hitboxes.size(); i++) {
 				DrawTextureRec(LOADED_ENTITIES[k].hitboxTexts[i],
@@ -218,6 +218,22 @@ void DrawEntities() { // dont question it im begging you
 						LOADED_ENTITIES[k].debugDrawCounter = 0;
 						std::cout << "At Draw : Entity : " << k << " Hitbox : " << i << " " << LOADED_ENTITIES[k].hitboxes[i].pos.x << " " << LOADED_ENTITIES[k].hitboxes[i].pos.y << std::endl;
 					}
+				}
+			}
+		}
+	}
+	// draw entity 0 last, because it's typically the player
+	if (!LOADED_ENTITIES[0].isTrigger) {
+		for (int i = 0; i < LOADED_ENTITIES[0].hitboxes.size(); i++) {
+			DrawTextureRec(LOADED_ENTITIES[0].hitboxTexts[i],
+				{ 0 , 0 , (LOADED_ENTITIES[0].hitboxes[i].width), (LOADED_ENTITIES[0].hitboxes[i].height) },
+				{ (LOADED_ENTITIES[0].hitboxes[i].pos.x) , (LOADED_ENTITIES[0].hitboxes[i].pos.y) },
+				LOADED_ENTITIES[0].tint);
+			if (DEBUG) {
+				LOADED_ENTITIES[0].debugDrawCounter += DT;
+				if (LOADED_ENTITIES[0].debugDrawCounter >= 1) { // so console doesnt get spammed
+					LOADED_ENTITIES[0].debugDrawCounter = 0;
+					std::cout << "At Draw : Entity : " << 0 << " Hitbox : " << i << " " << LOADED_ENTITIES[0].hitboxes[i].pos.x << " " << LOADED_ENTITIES[0].hitboxes[i].pos.y << std::endl;
 				}
 			}
 		}

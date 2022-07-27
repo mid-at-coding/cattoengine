@@ -39,7 +39,7 @@ public:
 	Color backgroundTint = WHITE;
 	void Draw(){
 			if(backgroundIsText){
-				DrawTexture(background, 0, 0, backgroundTint);  
+				DrawTextureRec(background, { 0,0,SCREENX,SCREENY }, {0,0},backgroundTint);
 			}
 			else{
 				ClearBackground(backgroundTint);
@@ -52,7 +52,7 @@ public:
 			backgroundIsText = true;
 		}
 	}
-	void init(std::string windowName, int fps = 0, std::string backgroundImage = "\n") { // just using \n as a placeholder because it wont be in any file names
+	void Init(std::string windowName, int fps = 0, std::string backgroundImage = "\n") { // just using \n as a placeholder because it wont be in any file names
 		std::cout << std::endl << "Starting Initialization" << std::endl;
 		InitWindow(SCREENX, SCREENY, windowName.c_str());
 		if (fps) {
