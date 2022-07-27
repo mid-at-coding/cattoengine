@@ -14,7 +14,11 @@ int main(){
 	std::ofstream file;
 	Texture2D Block = LoadTexture("assets/white_top.png");
 	Texture2D Wood = LoadTexture("assets/wood.png");
+	Texture2D Character = LoadTexture("assets/character.png");
 	Texture2D Brush = Wood;
+	int playerx, playery;
+	playerx = playery = 0;
+	bool PlayerBrush = false;
 	bool Delete = false;
 	std::vector<Entity> Arr;
 	Entity TileGrid[SIZE][SIZE];
@@ -25,6 +29,10 @@ int main(){
 			TileGrid[x][y].addTexture(Wood);
 		}
 	}
+	Entity Player;
+	Player.addBox(EntityHitbox(0,0,16,16,0));
+	Player.addTexture(Character);
+	Player.isTrigger(false);
 	while (!WindowShouldClose()) {
 		BeginDrawing();
 			if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
@@ -33,6 +41,11 @@ int main(){
 						if (TileGrid[x][y].Colliding((DoublePoint) { GetMouseX(), GetMouseY() })) {
 							if (Delete) {
 								TileGrid[x][y].isTrigger(true);
+							}
+							else if (PlayerBrush) {
+								Player.hitboxes(0)->pos = { TileGrid[x][y].hitboxes(0)->pos.x + (SCREENX / (2 * SIZE) - 8), TileGrid[x][y].hitboxes(0)->pos.y + (SCREENY / (2 * SIZE) - 8) }; // dont ask
+								playerx = x;
+								playery = y;
 							}
 							else {
 								TileGrid[x][y].isTrigger(false);
@@ -48,6 +61,9 @@ int main(){
 			if (IsKeyDown(KEY_TWO)) {
 				Brush = Wood;
 			}
+			if (IsKeyDown(KEY_P)) {
+				PlayerBrush = !PlayerBrush;
+			}
 			if (IsKeyDown(KEY_D)) {
 				Delete = !Delete;
 			}
@@ -60,6 +76,9 @@ int main(){
 				file << "assets/white_top.png" << std::endl;
 				for (int y = 0; y < SIZE; y++) {
 					for (int x = 0; x < SIZE; x++) {
+						if (x == playerx && y == playery) {
+							file << "p";
+						}
 						if (TileGrid[x][y].isTrigger() == true) {
 							file << "0,";
 						}
