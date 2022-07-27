@@ -2,7 +2,7 @@
 #include "raylib.h"
 #include "include/engine.hpp"
 #include "include/entity.hpp"
-#include "includescreen.hpp"
+#include "include/screen.hpp"
 #define SPEED 500
 void CheckMovement(Entity & Player) {
 	bool moveUp = IsKeyDown(KEY_W) || IsKeyDown(KEY_UP);
