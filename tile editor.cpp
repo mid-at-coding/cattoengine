@@ -232,7 +232,7 @@ int main(){
 							}
 						}
 					}
-					file << std::endl;
+					file << "\n";
 				}
 				file.close();
 			}
