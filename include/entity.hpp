@@ -41,6 +41,7 @@ public :
 class EntityContainer{ // container class for entities
 public :
 	bool isTrigger = false;
+	int triggerID = 0;
 	std::vector<EntityHitbox> hitboxes;
 	std::vector<Texture2D> hitboxTexts;
 	Color tint = WHITE;
@@ -176,13 +177,13 @@ public :
 	}
 	bool OutOfBounds() {
 		for (int i = 0; i < ent->hitboxes.size(); i++) {
-			if (std::min(hitboxes(i)->pos.x, hitboxes(i)->pos.y) < 0) {
+			if (std::min(hitboxes[i].pos.x, hitboxes[i].pos.y) < 0) {
 				return true;
 			}
-			if (hitboxes(i)->pos.x + hitboxes(i)->width > SCREENX) {
+			if (hitboxes[i].pos.x + hitboxes[i].width > SCREENX) {
 				return true;
 			}
-			if (hitboxes(i)->pos.y + hitboxes(i)->height > SCREENY) {
+			if (hitboxes[i].pos.y + hitboxes[i].height > SCREENY) {
 				return true;
 			}
 		}
@@ -196,12 +197,20 @@ public :
 	bool Colliding(EntityContainer entin) { return (*ent).Colliding(entin); };
 	void isTrigger(bool trigger) { (*ent).isTrigger = trigger; }
 	bool isTrigger() { return (*ent).isTrigger; }
-	void addBox(EntityHitbox in) { ent->hitboxes.push_back(in); }
-	void addTexture(Texture2D in) { ent->hitboxTexts.push_back(in); }
-	EntityHitbox* hitboxes(int x) { return &(ent->hitboxes[x]); }
-	Texture2D* hitboxTexts(int x) { return &(ent->hitboxTexts[x]); }
+	void addBox(EntityHitbox in) {
+		ent->hitboxes.push_back(in);
+		hitboxes = ent->hitboxes.data();
+	}
+	void addTexture(Texture2D in) {
+		ent->hitboxTexts.push_back(in);
+		hitboxTexts = ent->hitboxTexts.data();
+	}
+//	EntityHitbox* hitboxes(int x) { return &(ent->hitboxes[x]); }
+//	Texture2D* hitboxTexts(int x) { return &(ent->hitboxTexts[x]); }
 	Color tint() { return ent->tint; }
 	void tint(Color in) { ent->tint = in;}
+	EntityHitbox* hitboxes;
+	Texture2D* hitboxTexts;
 };
 
 void DrawEntities() { // dont question it im begging you

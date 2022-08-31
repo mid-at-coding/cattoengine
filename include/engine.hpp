@@ -8,7 +8,7 @@ double DT = 0;
 #define SCREENX 800
 #define SCREENY 800
 #define ENTITY_MAX 2000
-#define DEBUG true
+#define DEBUG false
 #define EMAX_CRASH false
 struct Point{
 	int x = 0;
@@ -34,7 +34,6 @@ bool ColorsEqual(Color c1, Color c2){
 class BackgroundScreen{
 public:	
 	bool backgroundIsText;
-	bool barrier[SCREENX][SCREENY];
 	Texture2D background;
 	Color backgroundTint = WHITE;
 	void Draw(){
