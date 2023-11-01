@@ -5,70 +5,69 @@
 #include <cmath>
 class EntityHitbox {
 public:
-	double speedX = 0;
-	double speedY = 0;
-	DoublePoint pos; // topleft corner
+	DoublePoint speed = { 0 , 0 }; // speed, in px/s
+	DoublePoint pos = { 0 , 0 }; // topleft corner
 	int width = 1;
 	int height = 1;
-	double speed = 1; // unused
 	double debugMoveCounter = 0;
 	EntityHitbox(double posX, double posY, int widthin, int len, double speedin = 0) {
 		pos.x = posX;
 		pos.y = posY;
 		width = widthin;
 		height = len;
-		speed = speedin;
+		speed = DoublePoint{ speedin, speedin };
 	}
 	EntityHitbox(DoublePoint posIn, int widthin, int len, double speedin = 0) {
 		pos = posIn;
 		width = widthin;
 		height = len;
-		speed = speedin;
+		speed = DoublePoint{ speedin, speedin };
 	}
 	EntityHitbox(Point posIn, int widthin, int len, double speedin = 0) {
 		pos = PointToDoublePoint(posIn);
 		width = widthin;
 		height = len;
-		speed = speedin;
+		speed = DoublePoint{ speedin, speedin };
 	}
-	EntityHitbox() {
-		pos = { 0,0 };
-	}
+	EntityHitbox(){}
 	inline void Move() {
-		pos.x += GetFrameTime() * speedX;
-		pos.y += GetFrameTime() * speedY;
+		pos.x += speed.x;
+		pos.y += speed.y;
 	}
 }; // hitboxes, no drawing
 class EntityContainer { // container class for entities
 public:
-	bool isTrigger = false;
+	bool trigger = false;
+	bool anim = false;
+	Point animOffset = {64,0}; // how much the animation is offset by per animation frame (not necessarily[and shouldn't be!] every actual frame) 
+	int fps = 5;
+	int frames = 4;
 	int triggerID = 0;
+	int currentFrame = 0;
+	double time = 0;
+	bool animDone = false; // anim run one time at least (doesn't affect looping)
 	std::vector<EntityHitbox> hitboxes;
 	std::vector<Texture2D> hitboxTexts;
 	Color tint = WHITE;
 	double debugDrawCounter = 0;
-	bool Colliding(DoublePoint p);
-	inline bool Colliding(Point p) {
+	Point offset = { 0 , 0 }; // offset of the texture, in px
+	std::string signText;
+	bool dontDraw = false;
+	bool Colliding(const DoublePoint& p);
+	inline bool Colliding(const Point& p) {
 		return(Colliding(PointToDoublePoint(p)));
 	}
-	inline bool Colliding(EntityHitbox ent) {
+	inline bool Colliding(const EntityHitbox& ent) {
 		for (int i = 0; i < hitboxes.size(); i++) {
-			if (Colliding((DoublePoint) { ent.pos.x, ent.pos.y })) { // topleft
+			if(CheckCollisionRecs({(float)hitboxes[i].pos.x, (float)hitboxes[i].pos.y
+								  ,(float)hitboxes[i].width,(float)hitboxes[i].height},
+							  	  {(float)ent.pos.x, (float)ent.pos.y, 
+								   (float)ent.width, (float)ent.height}))
 				return true;
-			}
-			if (Colliding((DoublePoint) { (ent.pos.x + ent.width), ent.pos.y })) { // topright
-				return true;
-			}
-			if (Colliding((DoublePoint) { (ent.pos.x + ent.width), (ent.pos.y + ent.height) })) { // bottomright
-				return true;
-			}
-			if (Colliding((DoublePoint) { ent.pos.x, (ent.pos.y + ent.height) })) { // bottomleft
-				return true;
-			}
 		}
 		return false;
 	}
-	inline bool Colliding(EntityContainer ent) {
+	inline bool Colliding(const EntityContainer& ent) {
 		for (int i = 0; i < ent.hitboxes.size(); i++) {
 			if (Colliding(ent.hitboxes[i])) {
 				return true;
@@ -76,6 +75,8 @@ public:
 		}
 		return false;
 	}
+	EntityContainer(bool t, bool an, Point animoff, int fs, int framenum, int trig, std::vector<EntityHitbox> hbs, std::vector<Texture2D> texts, Color tnt, Point off, std::string st, bool dd);
+	EntityContainer();
 };
 inline EntityContainer LOADED_ENTITIES[ENTITY_MAX];
 inline int LOADED_ENTITIES_HEAD = 0;
@@ -97,17 +98,16 @@ inline void clearEntitiesExceptFirst() {
 	LOADED_ENTITIES_HEAD = 1;
 }
 class Entity { // this is so scuffed and i hate it dont hmu i will break down if you ask me about it
+	int k;
 public:
 	EntityContainer* ent;
+	EntityHitbox* hitboxes;
+	Texture2D* hitboxTexts;
 	Entity(void);
-	void AddToGArry(void);
+	void AddToGArry(bool constructed = false);
 	Entity(EntityContainer in);
 	inline Entity operator = (Entity const& in) { // without this it would simply replace the pointers and that is usually not what is intended
-		ent->debugDrawCounter = in.ent->debugDrawCounter;
-		ent->hitboxes = in.ent->hitboxes;
-		ent->hitboxTexts = in.ent->hitboxTexts;
-		ent->isTrigger = in.ent->isTrigger;
-		ent->tint = in.ent->tint;
+		*in.ent = *ent;
 		return (*this);
 	}
 	inline bool OutOfBounds() {
@@ -130,8 +130,12 @@ public:
 	inline bool Colliding(EntityHitbox entin) { return (*ent).Colliding(entin); };
 	inline bool Colliding(Entity entin) { return (*ent).Colliding(*entin.ent); };
 	inline bool Colliding(EntityContainer entin) { return (*ent).Colliding(entin); };
-	inline void isTrigger(bool trigger) { (*ent).isTrigger = trigger; }
-	inline bool isTrigger() { return (*ent).isTrigger; }
+	inline void Trigger(bool trigger) { (*ent).trigger = trigger; }
+	inline bool Trigger() { return (*ent).trigger; }
+	inline bool DontDraw() { return (*ent).dontDraw; }
+	inline void DontDraw(bool dontDraw){ (*ent).dontDraw = dontDraw; }
+	inline void Offset(Point p){ ent->offset = p; }
+	inline Point* Offset(){ return &(ent->offset); }
 	inline void addBox(EntityHitbox in) {
 		ent->hitboxes.push_back(in);
 		hitboxes = ent->hitboxes.data();
@@ -140,18 +144,18 @@ public:
 		ent->hitboxTexts.push_back(in);
 		hitboxTexts = ent->hitboxTexts.data();
 	}
-	//	EntityHitbox* hitboxes(int x) { return &(ent->hitboxes[x]); }
-	//	Texture2D* hitboxTexts(int x) { return &(ent->hitboxTexts[x]); }
+	inline int GetArrOffset(){ return k; }
 	inline Color tint() { return ent->tint; }
 	inline void tint(Color in) { ent->tint = in; }
-	EntityHitbox* hitboxes;
-	Texture2D* hitboxTexts;
 };
 
 void initEntityArr(void);
 void clearEntities(void);
 void clearEntitiesExceptFirst(void);
 
+void DrawEntity(int k);
+void DrawEntity(Entity& ent);
+void DrawEntity(EntityContainer& ent, int k = -1);
 void DrawEntities(void);
 void MoveEntities(void);
 #endif

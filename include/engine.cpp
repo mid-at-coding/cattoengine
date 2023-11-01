@@ -1,17 +1,19 @@
 #include "engine.hpp"
+#include <cmath>
 // Macros / global variables = SNAKE_CASE_CAPS
 // Functions / classes = PascalCase
 // Variables = camelCase
-#define SCREENX 800
-#define SCREENY 800
-#define ENTITY_MAX 2000
-#define DEBUG false
-#define EMAX_CRASH false
 Point DoublePointToPoint(DoublePoint d){
-	return(Point({ int(d.x) , int(d.y) }));
+	Point ret;
+	ret.x = d.x;
+	ret.y = d.y;
+	return ret;
 }
 DoublePoint PointToDoublePoint(Point p){
-	return(DoublePoint({ double(p.x) , double(p.y) }));
+	DoublePoint ret;
+	ret.x = p.x;
+	ret.y = p.y;
+	return ret;
 }
 bool ColorsEqual(Color c1, Color c2){
 	if(c1.r == c2.r && c1.g == c2.g && c1.b == c2.b) {
@@ -22,7 +24,19 @@ bool ColorsEqual(Color c1, Color c2){
 }
 void BackgroundScreen::Draw(){
 	if((*this).backgroundIsText){
-		DrawTextureRec(background, { 0,0,SCREENX,SCREENY }, {0,0},backgroundTint);
+		if (anim){
+			time += GetFrameTime();
+			if(time > (double)(frames) / (double)animFps){
+				time = 0;
+				currentFrame = 0;
+				animDone = true;
+			}
+			currentFrame = std::floor(animFps * time);
+		}
+		ClearBackground(backgroundTint);
+		DrawTextureRec(background, { 0,0,background.width,background.height }, 
+		{(int)offset.x + (anim ? animOffset.x * currentFrame : 0 ),
+		 (int)offset.y + (anim ? animOffset.y * currentFrame : 0 )},WHITE);
 	}
 	else{
 		ClearBackground(backgroundTint);
@@ -35,7 +49,7 @@ BackgroundScreen::BackgroundScreen(std::string backgroundImage) {
 		backgroundIsText = true;
 	}
 }
-void BackgroundScreen::Init(std::string windowName, int fps, std::string backgroundImage) { // just using \n as a placeholder because it wont be in any file names
+void BackgroundScreen::Init(std::string windowName, int fps, std::string backgroundImage) {
 	std::cout << std::endl << "Starting Initialization" << std::endl;
 	InitWindow(SCREENX, SCREENY, windowName.c_str());
 	if (fps) {
@@ -48,5 +62,3 @@ void BackgroundScreen::Init(std::string windowName, int fps, std::string backgro
 	}
 	std::cout << std::endl << "Initialization Finished" << std::endl;
 }
-
-	
