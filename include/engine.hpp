@@ -1,8 +1,7 @@
 #ifndef engine_h
 #define engine_h
 #include <string>
-#include <iostream>
-#include "../raylib/src/raylib.h"
+#include <raylib.h> 
 #define SCREENX 1024
 #define SCREENY 576
 #define ENTITY_MAX 2000

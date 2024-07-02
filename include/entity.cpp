@@ -1,5 +1,10 @@
 #include "entity.hpp"
-bool EntityContainer::Colliding(const DoublePoint& p) {
+#include <iostream>
+#include <cmath>
+std::set<Entity*> Entity::screenEntities; // entities we can safely delete while clearing the screen
+std::map<int, std::vector<Entity*>> Entity::renderingPriority; // renderingPriority[0] -> map of all entities that are rendered on the bottom, etc.
+std::set<int> Entity::registeredLayers; // all the layers
+bool Entity::Colliding(const DoublePoint& p) {
 	for (int i = 0; i < hitboxes.size(); i++) {
 		if (p.x >= hitboxes[i].pos.x && p.x <= (hitboxes[i].pos.x + hitboxes[i].width)) { // check if x coord is inside
 			if (p.y >= hitboxes[i].pos.y && p.y <= (hitboxes[i].pos.y + hitboxes[i].height)) { // check if y coord is inside
@@ -9,53 +14,10 @@ bool EntityContainer::Colliding(const DoublePoint& p) {
 	}
 	return false;
 }
-void Entity::AddToGArry(bool constructed) {
-	{
-		if (DEBUG && constructed) {
-			std::cout << "Entity Constructer Called" << std::endl;
-		}
-		if (LOADED_ENTITIES_HEAD > ENTITY_MAX) {
-			// fuck
-			// easy way out = crash
-			if (EMAX_CRASH) {
-				std::cerr << "EMAX_CRASH";
-				exit(1);
-			}
-			else { // uh um hm help
-				ent = &LOADED_ENTITIES[ENTITY_MAX - 1]; // bad solution
-				k = LOADED_ENTITIES_HEAD - 1;
-				if (DEBUG) {
-					std::cout << "[VERY VERY BAD] : Entity Overflow! Entity replaced end of array" << std::endl;
-				}
-			}
-		}
-		else {
-			ent = &LOADED_ENTITIES[LOADED_ENTITIES_HEAD++];
-			k = LOADED_ENTITIES_HEAD - 1;
-			if(!constructed){
-				hitboxes = ent->hitboxes.data();
-				hitboxTexts = ent->hitboxTexts.data();
-			}
-			if (DEBUG) {
-				std::cout << "Entity Loaded Succesfully" << std::endl;
-			}
-		}
-		return;
-	}
-}
-Entity::Entity() {
-	AddToGArry(true);
-}
-Entity::Entity(EntityContainer in) {
-	ent = &in;
-}
-void DrawEntity(int k){
-	DrawEntity(LOADED_ENTITIES[k], k);
-}
 void DrawEntity(Entity& ent){
-	DrawEntity(*ent.ent);
+	DrawEntity(ent);
 }
-void DrawEntity(EntityContainer& ent, int k){
+void DrawEntity(Entity& ent, int k){
 	if(ent.anim){ // use LOADED_ENTITIES[k] bc entity container is passed by value (maybe fix? because that's a lot of data)
 		ent.time += GetFrameTime();
 		if(ent.time > (double)(ent.frames) / (double)ent.fps){
@@ -73,7 +35,7 @@ void DrawEntity(EntityContainer& ent, int k){
 			return;
 		for (int i = 0; i < ent.hitboxes.size(); i++) {
 			std::string name;
-			name = std::to_string(k) + "." + std::to_string(i) + "\n" + std::to_string(ent.triggerID) + "\nnodraw"; 
+			name = std::to_string(k) + "." + std::to_string(i) + "\n" + ent.id + "\nnodraw"; 
 			DrawRectangleLines(ent.hitboxes[i].pos.x, ent.hitboxes[i].pos.y, ent.hitboxes[i].width, ent.hitboxes[i].height, GREEN);
 			DrawText(name.c_str(), ent.hitboxes[i].pos.x, ent.hitboxes[i].pos.y, 20, BLACK);
 		}
@@ -87,49 +49,88 @@ void DrawEntity(EntityContainer& ent, int k){
 			{ ent.hitboxes[i].pos.x , ent.hitboxes[i].pos.y },
 			ent.tint);
 
-			if (DRAW_DEBUG) {
-				ent.debugDrawCounter += GetFrameTime();
-				if (ent.debugDrawCounter >= 1) { // so console doesnt get spammed
-					ent.debugDrawCounter = 0;
-					std::cout << "At Draw : Entity : " << k << " Hitbox : " << i << " " << ent.hitboxes[i].pos.x << " " << ent.hitboxes[i].pos.y << std::endl;
-				}
-			}
 			if (DEBUG && k > 0){
 				std::string name;
-				name = std::to_string(k) + "." + std::to_string(i) + "\n" + std::to_string(ent.triggerID); 
+				name = std::to_string(k) + "." + std::to_string(i) + "\n" + ent.id; 
 				DrawRectangleLines(ent.hitboxes[i].pos.x, ent.hitboxes[i].pos.y, ent.hitboxes[i].width, ent.hitboxes[i].height, GREEN);
 				DrawText(name.c_str(), ent.hitboxes[i].pos.x, ent.hitboxes[i].pos.y, 20, GREEN);
 			}
 	}
 }
-void DrawEntities() {
-	for (int k = 1; k < LOADED_ENTITIES_HEAD; k++) {
-		DrawEntity(k);
-	}
-	// draw entity 0 last, because it's typically the player
-	DrawEntity(0);
-}
-void MoveEntities() {
-	for (int i = 0; i < LOADED_ENTITIES_HEAD; i++) {
-		for (int k = 0; k < LOADED_ENTITIES[k].hitboxes.size(); k++) {
-			LOADED_ENTITIES[i].hitboxes[k].Move();
+void Entity::DrawEntities() {
+	for(auto& currentLayer : registeredLayers){
+		for(Entity*& currentEntity : renderingPriority.at(currentLayer)){
+			DrawEntity(*currentEntity);
 		}
 	}
 }
-EntityContainer::EntityContainer(bool t, bool an, Point animoff, int fs, int framenum, int trig, std::vector<EntityHitbox> hbs, std::vector<Texture2D> texts, Color tnt, Point off, std::string st, bool dd){
-	trigger = t;
-	anim = an;
-	animOffset = animoff;
-	fps = fs;
-	frames = framenum;
-	triggerID = trig;
-	hitboxes = hbs;
-	hitboxTexts = texts;
-	tint = tnt;
-	offset = off;
-	signText = st;
-	dontDraw = dd;
+
+Entity::Entity(){
+	SetLayer(layer);
 }
-EntityContainer::EntityContainer(){
-	// left blank to get the compiler to stop complaining
+Entity::Entity(std::string idIn){
+	id = idIn;
+	SetLayer(layer);
+}
+
+void Entity::SetLayer(int newLayer){
+	// linearly search for ourself in our old layer
+	for(auto it = renderingPriority.at(layer).begin();;it++){
+		if(*it == this){ // that's us!
+			renderingPriority.at(layer).erase(it);
+			break;
+		}
+	}
+
+	// make sure our new layer is registered
+	registeredLayers.insert(newLayer);
+
+	// check if we already exist in the new layer
+	for(auto it = renderingPriority.at(newLayer).begin();;it++){
+		if(*it == this){ // kind of odd, but i guess we're done
+			layer = newLayer; // make sure to set our layer
+			return;
+		}
+	}
+	// add ourself to the rendering priorities
+	renderingPriority[newLayer].push_back(this);
+
+	// set our layer
+	layer = newLayer;
+}
+
+int Entity::GetLayer(){
+	return layer;
+}
+Entity::~Entity(){
+	// remove our spot in the rendering priorities
+	for(auto it = renderingPriority.at(layer).begin();;it++){
+		if(*it == this){
+			renderingPriority.at(layer).erase(it);
+			break;
+		}
+	}
+
+	// if we were the only one in that layer, remove the layer too
+	if(renderingPriority.at(layer).empty())
+		renderingPriority.erase(layer);
+}
+
+void Entity::Update(){ }
+void Entity::OnTouch(Entity&){ }
+void Entity::OnUse(Entity&){ }
+
+void Entity::SetScreenEntity(bool reset){
+	if(reset){
+		screenEntities.erase(this);
+		return;
+	}
+	screenEntities.insert(this);
+}
+
+void Entity::ClearEntities(){
+	for(Entity* currentEntity : screenEntities){
+		delete currentEntity;
+	}
+	screenEntities.clear();
 }

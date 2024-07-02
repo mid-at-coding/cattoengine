@@ -1,8 +1,9 @@
 #ifndef entity_h
 #define entity_h
 #include <vector>
+#include <map>
+#include <set>
 #include "engine.hpp"
-#include <cmath>
 class EntityHitbox {
 public:
 	DoublePoint speed = { 0 , 0 }; // speed, in px/s
@@ -35,24 +36,41 @@ public:
 		pos.y += speed.y;
 	}
 }; // hitboxes, no drawing
-class EntityContainer { // container class for entities
+class Entity { // entities
+	static std::set<Entity*> screenEntities; // entities we can safely delete while clearing the screen
+	static std::map<int, std::vector<Entity*>> renderingPriority; // renderingPriority[0] -> map of all entities that are rendered on the bottom, etc.
+																  // also update priority mostly cause i have no good reason to change it
+	static std::set<int> registeredLayers; // all the layers
+	int layer = 0;
 public:
-	bool trigger = false;
+	std::string id;
+	std::string signText;
+
 	bool anim = false;
-	Point animOffset = {64,0}; // how much the animation is offset by per animation frame (not necessarily[and shouldn't be!] every actual frame) 
+	Point animOffset = {64,0}; // how much the animation is offset by per animation frame (not necessarily every actual frame) 
 	int fps = 5;
 	int frames = 4;
-	int triggerID = 0;
 	int currentFrame = 0;
 	double time = 0;
 	bool animDone = false; // anim run one time at least (doesn't affect looping)
+	Color tint = WHITE;
+	Point offset = { 0 , 0 }; // offset of the texture, in px
+	bool dontDraw = false;
+	
 	std::vector<EntityHitbox> hitboxes;
 	std::vector<Texture2D> hitboxTexts;
-	Color tint = WHITE;
-	double debugDrawCounter = 0;
-	Point offset = { 0 , 0 }; // offset of the texture, in px
-	std::string signText;
-	bool dontDraw = false;
+
+	virtual void Update(void);
+	virtual void OnTouch(Entity&);
+	virtual void OnUse(Entity&);
+
+	void SetScreenEntity(bool reset = false); // make this entity a "screen entity" -- specify that it can be deleted when clearing the screen	
+	static void ClearEntities(void);
+
+	void SetLayer(int newLayer);
+	int GetLayer();
+	static void DrawEntities(void);
+
 	bool Colliding(const DoublePoint& p);
 	inline bool Colliding(const Point& p) {
 		return(Colliding(PointToDoublePoint(p)));
@@ -67,7 +85,7 @@ public:
 		}
 		return false;
 	}
-	inline bool Colliding(const EntityContainer& ent) {
+	inline bool Colliding(const Entity& ent) {
 		for (int i = 0; i < ent.hitboxes.size(); i++) {
 			if (Colliding(ent.hitboxes[i])) {
 				return true;
@@ -75,87 +93,10 @@ public:
 		}
 		return false;
 	}
-	EntityContainer(bool t, bool an, Point animoff, int fs, int framenum, int trig, std::vector<EntityHitbox> hbs, std::vector<Texture2D> texts, Color tnt, Point off, std::string st, bool dd);
-	EntityContainer();
-};
-inline EntityContainer LOADED_ENTITIES[ENTITY_MAX];
-inline int LOADED_ENTITIES_HEAD = 0;
-inline void initEntityArr() {
-	EntityContainer empty;
-	for (int i = 0; i < ENTITY_MAX; i++) {
-		LOADED_ENTITIES[i] = empty;
-	}
-	LOADED_ENTITIES_HEAD = 0;
-}
-inline void clearEntities() {
-	initEntityArr();
-}
-inline void clearEntitiesExceptFirst() {
-	EntityContainer empty;
-	for (int i = 1; i < ENTITY_MAX; i++) {
-		LOADED_ENTITIES[i] = empty;
-	}
-	LOADED_ENTITIES_HEAD = 1;
-}
-class Entity { // this is so scuffed and i hate it dont hmu i will break down if you ask me about it
-	int k;
-public:
-	EntityContainer* ent;
-	EntityHitbox* hitboxes;
-	Texture2D* hitboxTexts;
-	Entity(void);
-	void AddToGArry(bool constructed = false);
-	Entity(EntityContainer in);
-	inline Entity operator = (Entity const& in) { // without this it would simply replace the pointers and that is usually not what is intended
-		*in.ent = *ent;
-		return (*this);
-	}
-	inline bool OutOfBounds() {
-		for (int i = 0; i < ent->hitboxes.size(); i++) {
-			if (std::min(hitboxes[i].pos.x, hitboxes[i].pos.y) < 0) {
-				return true;
-			}
-			if (hitboxes[i].pos.x + hitboxes[i].width > SCREENX) {
-				return true;
-			}
-			if (hitboxes[i].pos.y + hitboxes[i].height > SCREENY) {
-				return true;
-			}
-		}
-		return false;
-	}
-	// inheritance wont work here so
-	inline bool Colliding(DoublePoint p) { return (*ent).Colliding(p); };
-	inline bool Colliding(Point p) { return (*ent).Colliding(p); };
-	inline bool Colliding(EntityHitbox entin) { return (*ent).Colliding(entin); };
-	inline bool Colliding(Entity entin) { return (*ent).Colliding(*entin.ent); };
-	inline bool Colliding(EntityContainer entin) { return (*ent).Colliding(entin); };
-	inline void Trigger(bool trigger) { (*ent).trigger = trigger; }
-	inline bool Trigger() { return (*ent).trigger; }
-	inline bool DontDraw() { return (*ent).dontDraw; }
-	inline void DontDraw(bool dontDraw){ (*ent).dontDraw = dontDraw; }
-	inline void Offset(Point p){ ent->offset = p; }
-	inline Point* Offset(){ return &(ent->offset); }
-	inline void addBox(EntityHitbox in) {
-		ent->hitboxes.push_back(in);
-		hitboxes = ent->hitboxes.data();
-	}
-	inline void addTexture(Texture2D in) {
-		ent->hitboxTexts.push_back(in);
-		hitboxTexts = ent->hitboxTexts.data();
-	}
-	inline int GetArrOffset(){ return k; }
-	inline Color tint() { return ent->tint; }
-	inline void tint(Color in) { ent->tint = in; }
-};
 
-void initEntityArr(void);
-void clearEntities(void);
-void clearEntitiesExceptFirst(void);
-
-void DrawEntity(int k);
+	Entity();
+	Entity(std::string);
+	~Entity();
+};
 void DrawEntity(Entity& ent);
-void DrawEntity(EntityContainer& ent, int k = -1);
-void DrawEntities(void);
-void MoveEntities(void);
 #endif

@@ -1,8 +1,10 @@
 #include "engine.hpp"
 #include <cmath>
+#include <iostream>
 // Macros / global variables = SNAKE_CASE_CAPS
 // Functions / classes = PascalCase
 // Variables = camelCase
+bool DEBUG = true;
 Point DoublePointToPoint(DoublePoint d){
 	Point ret;
 	ret.x = d.x;

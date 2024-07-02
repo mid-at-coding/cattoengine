@@ -1,5 +1,7 @@
 #include "screen.hpp"
 #include <string>
+#include <fstream>
+#include <iostream>
 static bool bracesMatched(std::string st){
 	int total = 0;
 	for(int i = 0 ; i < st.size(); i++){
@@ -21,21 +23,19 @@ static void ReplaceStringInPlace(std::string& subject, const std::string& search
          pos += replace.length();
     }
 }
-Screen::Screen(Texture2D backin, std::vector<EntityContainer> entin) {
+Screen::Screen(Texture2D backin, std::vector<Entity*> entin) {
 		background = backin;
 		entities = entin;
 }
 void Screen::Load() {
-	clearEntities();
+	Entity::ClearEntities();
 	if (DEBUG)
 		std::cout << "Screen Cleared \n";
 	for (int i = 0; i < entities.size(); i++) {
-		LOADED_ENTITIES[i] = entities[i];
+		entities[i]->SetScreenEntity();
 	}
-	LOADED_ENTITIES_HEAD = entities.size();
 	if (DEBUG) {
 		std::cout << "Entities Added to Entity Array \n";
-		std::cout << "EArr Head : " << LOADED_ENTITIES_HEAD << std::endl;
 	}
 }
 int Screen::DataStart(std::vector<std::string> &data, int size){
@@ -56,9 +56,9 @@ void Screen::ParseEntity(const std::string in, const DoublePoint pos, int& n, co
 	bool flag_invis = false;
 	bool flag_anim = false;
 	bool flag_sign = false;
-	bool flag_metadata = false;
+	bool flag_id = false;
 	bool flag_behind = false;
-	int metadata = 0;
+	std::string id = "entity_generic";
 	int behind_pos = 0;
 	std::string behind_str = "";
 	std::string signText = "";
@@ -89,11 +89,11 @@ void Screen::ParseEntity(const std::string in, const DoublePoint pos, int& n, co
 				break;
 			case '[' :
 				i++;
+				id = "";
 				for(std::string num; in[i] != ']'; i++){
-					num += in[i];
-					metadata = std::stoi(num);
+					id += in[i];
 				}
-	 			flag_metadata = true;
+	 			flag_id = true;
 				break;
 			case 'B' :
 				flag_behind = true;
@@ -107,22 +107,28 @@ void Screen::ParseEntity(const std::string in, const DoublePoint pos, int& n, co
 		}
 	}
 	if(flag_player){
-		entities[0].hitboxes[0].pos = pos;
-		entities[0].hitboxes[1].pos.y -= 20; // deal w it
+		// TODO
 	}
 	if(flag_sign)
 		ReplaceStringInPlace(signText,"\\n","\n");
-	if(!flag_barrier && !flag_invis && !flag_anim && !flag_sign && !flag_metadata && (textureNum == "0" || textureNum == "00")){
+	if(!flag_barrier && !flag_invis && !flag_anim && !flag_sign && !flag_id && (textureNum == "0" || textureNum == "00")){
 		n--;
 		return; // no reason to make an entity
 	}
+
+	// make an entity
+	Entity* ent = new Entity;
+	ent->dontDraw = flag_invis;
+	ent->anim = flag_anim;
+	ent->signText = signText;
+	ent->id = id;
+	ent->hitboxes.push_back(EntityHitbox(pos, tileSizeX, tileSizeY));
+	ent->hitboxTexts.push_back(expectedTexts[std::stoi(textureNum)]);
+
 	if(flag_barrier)
 		barriers.push_back(n);
-	entities.push_back(EntityContainer(flag_metadata, flag_anim, {64,0}, 5, 4, metadata,
-				       std::vector<EntityHitbox>{EntityHitbox(pos,tileSizeX,tileSizeY)},
-					   (flag_invis || std::stoi(textureNum) == 0) ? std::vector<Texture2D>{} :
-					   std::vector<Texture2D>{expectedTexts[std::stoi(textureNum) - 1]}, WHITE, {0,0},
-					   flag_sign ? signText : "", flag_invis));
+
+	entities.push_back(ent);
 	if(flag_behind){
 		ParseEntity(behind_str, pos, ++n ,expectedTexts);
 	}
@@ -178,22 +184,11 @@ void Screen::ReadFromFile(std::string fileName, DoublePoint player) {
 		int entityCounter = entities.size() - 1;
 		int xcounter = 0;
 		barriers.clear();
-		clearEntitiesExceptFirst();
+		Entity::ClearEntities();
 		int datastart = -1;
 		std::string currentPiece = "";
-		if(DEBUG){
-			std::cout << "at beginning of reading : " << std::endl;
-			std::cout << "		barriers : ";
-			for(int i = 0; i < barriers.size(); i++){
-				std::cout << barriers[i] << " , ";
-			}
-			std::cout << "\n		entities : ";
-			for(int i = 0; i < LOADED_ENTITIES_HEAD; i++){
-				std::cout << i << " , ";
-			}
-			std::cout << std::endl;
-		}
 		int size;
+
 		size = std::stoi(data[0]); // first line is the size of the grid
 		datastart = DataStart(data, size);
 		this->height = (data.size() - 1) - (datastart + 1);
@@ -229,77 +224,29 @@ void Screen::ReadFromFile(std::string fileName, DoublePoint player) {
 			for(int i = 0; i < barriers.size(); i++){
 				std::cout << barriers[i] << " , ";
 			}
-			std::cout << "\n		entities : ";
-			for(int i = 0; i < LOADED_ENTITIES_HEAD; i++){
-				std::cout << i << " , ";
-			}
-			std::cout << std::endl;
 		}
 }
-bool Screen::CheckMove(const Point to) {
+bool Screen::CheckPoint(const Point to) {
 		for (size_t i = 0; i < barriers.size(); i++) {
-			if (LOADED_ENTITIES[barriers[i]].Colliding(to)) {
+			if (entities[barriers[i]]->Colliding(to)) {
 				return false;
 			}
 		}
 		return true;
 	}
-bool Screen::CheckMove(const EntityContainer& to) {
+bool Screen::CheckEntity(const Entity& to) {
 		for (size_t i = 0; i < barriers.size(); i++) {
-			if (LOADED_ENTITIES[barriers[i]].Colliding(to)) {
+			if (entities[barriers[i]]->Colliding(to)) {
 				return false;
 			}
 		}
 		return true;
 	}
-bool Screen::CheckMove(const EntityHitbox& to) {
+bool Screen::CheckHitbox(const EntityHitbox& to) {
 	for (size_t i = 0; i < barriers.size(); i++) {
-		if (LOADED_ENTITIES[barriers[i]].Colliding(to)) {
+		if (entities[barriers[i]]->Colliding(to)) {
 			return false;
 		}
 	}
 	return true;
-}
-std::optional<int> FindTrigger(int find){
-	std::optional<int> ret; 
-	for(int i = 0; i < LOADED_ENTITIES_HEAD; i++){
-		if(LOADED_ENTITIES[i].triggerID == find){
-			ret = i;
-			return ret;
-		}
-	}
-	ret.reset();
-	return ret;
-}
-std::optional<std::vector<int>> FindTriggerV(int find){
-	std::optional<std::vector<int>> ret; 
-	ret.reset();
-	for(int i = 0; i < LOADED_ENTITIES_HEAD; i++){
-		if(LOADED_ENTITIES[i].triggerID == find){
-			ret->push_back(i);
-		}
-	}
-	return ret;
-}
-std::optional<std::vector<int>> TriggerCollision(const Entity& Player) {
-	std::vector<int> out;
-	for (int i = 0; i < LOADED_ENTITIES_HEAD; i++) {
-		if (LOADED_ENTITIES[i].Colliding(Player.hitboxes[0]) && LOADED_ENTITIES[i].triggerID != 0) {
-			out.push_back(LOADED_ENTITIES[i].triggerID);
-		}
-	}
-	if(out.size())
-		return out;
-	return {};
-}
-std::optional<std::vector<int>> TriggerCollision(const EntityContainer& Player) {
-	std::vector<int> out;
-	for (int i = 0; i < LOADED_ENTITIES_HEAD; i++) {
-		if (LOADED_ENTITIES[i].Colliding(Player.hitboxes[0]) && LOADED_ENTITIES[i].triggerID != 0) {
-			out.push_back(LOADED_ENTITIES[i].triggerID);
-		}
-	}
-	if(out.size())
-		return out;
-	return {};
 }
